@@ -24,6 +24,12 @@ def resample_df(df,resample_freq):
     avg_df[name+'_diff'] = avg_df[name] - avg_df[name].shift(1)
     return avg_df
 
+class Appliance():
+    def __init__(self, name, power_data):
+        self.name =  name
+        self.power_data = power_data
+
+
 #focus on fridge, tv, dishwasher and washer for now
 
 
