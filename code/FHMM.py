@@ -7,6 +7,7 @@ import itertools
 from hmmlearn.hmm import GaussianHMM
 from collections import OrderedDict
 from copy import deepcopy
+from Clustering import cluster
 
 def combine_parameters(ind_parameters_list):
     '''
@@ -103,9 +104,11 @@ def create_combined_hmm(model):
 
     combined_model = GaussianHMM(
         n_components=len(pi_combined), covariance_type='full',
-        startprob=pi_combined, transmat=A_combined)
+        startprob_prior=pi_combined, transmat_prior=A_combined)
     combined_model.covars_ = cov_combined
     combined_model.means_ = mean_combined
+    combined_model.startprob_ = pi_combined
+    combined_model.transmat_ = A_combined
     return combined_model
 
 
@@ -169,40 +172,44 @@ class FHMM():
             max_num_clusters = 3
 
         for i, app in enumerate(appliances):
-            power_data = app.power_data.fillna(value = 0,inplace = True)
+            power_data = app.power_data.fillna(value = 0,inplace = False)
             X = power_data.values.reshape((-1, 1))
             assert X.ndim == 2
             self.X = X
 
-            if num_states_dict.get(app) is not None:
+            if num_states_dict.get(app.name) is not None:
                 # User has specified the number of states for this appliance
-                num_total_states = num_states_dict.get(app)
+                num_total_states = num_states_dict.get(app.name)
 
             else:
                 # Find the optimum number of states
-                states = cluster(power_data, max_num_clusters)
+                print "Identifying number of hidden states for appliance {}".format(app.name)
+                states = cluster(X, max_num_clusters)
                 num_total_states = len(states)
+                print "Number of hidden states for appliance {}: {}".format(app.name, num_total_states)
 
-            print("Training model for submeter '{}'".format(app))
-            learnt_model[app] = GaussianHMM(num_total_states, "full")
+            print("Training model for appliance '{} with {} hidden states'".format(app.name, num_total_states))
+            learnt_model[app.name] = GaussianHMM(num_total_states, "full")
 
             # Fit
-            learnt_model[app].fit([X])
+            learnt_model[app.name].fit(X)
 
 
         # Combining to make a AFHMM
         self.meters = []
         new_learnt_models = OrderedDict()
-        for meter in learnt_model:
+        for app in learnt_model:
             startprob, means, covars, transmat = sort_learnt_parameters(
-                learnt_model[meter].startprob_, learnt_model[meter].means_,
-                learnt_model[meter].covars_, learnt_model[meter].transmat_)
-            new_learnt_models[meter] = GaussianHMM(
+                learnt_model[app].startprob_, learnt_model[app].means_,
+                learnt_model[app].covars_, learnt_model[app].transmat_)
+            new_learnt_models[app] = GaussianHMM(
                 startprob.size, "full", startprob, transmat)
-            new_learnt_models[meter].means_ = means
-            new_learnt_models[meter].covars_ = covars
+            new_learnt_models[app].means_ = means
+            new_learnt_models[app].covars_ = covars
+            new_learnt_models[app].startprob_ = startprob
+            new_learnt_models[app].transmat_ = transmat
             # UGLY! But works.
-            self.meters.append(meter)
+            self.meters.append(app)
 
         learnt_model_combined = create_combined_hmm(new_learnt_models)
         self.individual = new_learnt_models
