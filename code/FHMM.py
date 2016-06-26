@@ -9,6 +9,12 @@ from collections import OrderedDict
 from copy import deepcopy
 from Clustering import cluster
 
+def compute_A_fhmm(list_A):
+    result = list_A[0]
+    for i in range(len(list_A) - 1):
+        result = np.kron(result, list_A[i + 1])
+    return result
+
 def combine_parameters(ind_parameters_list):
     '''
     Function to compute factorized HMM parameters such as starting probabilities or transition matrices
@@ -21,6 +27,20 @@ def combine_parameters(ind_parameters_list):
     for idx in xrange(1,len(ind_parameters_list)):
         FactA = np.kron(FactAParam,ind_parameters_list[idx])
     return FactAParam
+
+def compute_pi_fhmm(list_pi):
+    """
+    Parameters
+    -----------
+    list_pi : List of PI's of individual learnt HMMs
+    Returns
+    -------
+    result : Combined Pi for the FHMM
+    """
+    result = list_pi[0]
+    for i in range(len(list_pi) - 1):
+        result = np.kron(result, list_pi[i + 1])
+    return result
 
 def combine_means(means_list):
     """
@@ -98,8 +118,8 @@ def create_combined_hmm(model):
     list_means = [model[appliance].means_.flatten().tolist()
                   for appliance in model]
 
-    pi_combined = combine_parameters(list_pi)
-    A_combined = combine_parameters(list_A)
+    pi_combined = compute_pi_fhmm(list_pi)
+    A_combined = compute_A_fhmm(list_A)
     [mean_combined, cov_combined] = combine_means(list_means)
 
     combined_model = GaussianHMM(
@@ -203,7 +223,7 @@ class FHMM():
                 learnt_model[app].startprob_, learnt_model[app].means_,
                 learnt_model[app].covars_, learnt_model[app].transmat_)
             new_learnt_models[app] = GaussianHMM(
-                startprob.size, "full", startprob, transmat)
+                startprob.size, "full")
             new_learnt_models[app].means_ = means
             new_learnt_models[app].covars_ = covars
             new_learnt_models[app].startprob_ = startprob

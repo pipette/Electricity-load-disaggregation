@@ -18,7 +18,7 @@ class Appliance():
 
 app_train_list = []
 app_test_list = []
-for channel in four_app_train.columns[::2]:
+for channel in four_app_train[['channel_12','channel_7']].columns:
     app_train_list.append(Appliance(channel,four_app_train[[channel]]))
     app_test_list.append(Appliance(channel,four_app_test[[channel]]))
 
@@ -28,10 +28,16 @@ for channel in four_app_train.columns:
 
 test_mains = four_app_test[['channel_12','channel_7']]
 test_mains['total'] = test_mains.sum(axis = 1)
-print test_mains.head(20)
+# print test_mains.head(20)
 
 fhmm = FHMM.FHMM()
 fhmm.train(app_train_list, num_states_dict = num_states_dict)
 predict= fhmm.disaggregate_chunk(test_mains[['total']])
-print predict.head(20)
+
+for ind in fhmm.individual:
+    print fhmm.individual[ind].transmat_
+    print "*"*100
+
+print fhmm.model.transmat_
+# print predict.head(20)
 
