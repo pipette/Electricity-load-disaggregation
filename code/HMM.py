@@ -5,17 +5,34 @@ from matplotlib.dates import YearLocator, MonthLocator
 import cPickle as pk
 from hmmlearn.hmm import GaussianHMM
 
+def HMM_MAD(model,obs_levels):
+    hidden_states = model.predict(obs_levels)
+    means = model.means_.round().astype(int).flatten().tolist()
+    predict_levels = np.array([means[state] for state in hidden_states]).reshape(obs_levels.shape)
+    abs_error = np.absolute(obs_levels - predict_levels)
+    return np.mean(abs_error)/np.mean(obs_levels)
 
 class HMM():
-    def __init__(self, X_test, X_train, n_states = 2):
+    def __init__(self, X_test, X_train):
         self.X_train = X_train
         self.X_test = X_test
-        self.n_states = n_states
-        self.model =  GaussianHMM(n_components=n_states, covariance_type="diag", n_iter=10000)
+        self.n_states = None
+        self.model =  None
 
     def fit_HMM(self):
-        print "fitting to HMM and decoding ..."
-        self.model.fit(self.X_train)
+        print "Looking for optimal number of states and fitting HMM"
+        best_guess = 10000
+        best_model = None
+        for i in xrange(2,9):
+            candidate = GaussianHMM(n_components=i, covariance_type="full", n_iter=1000)
+            candidate.fit(self.X_train)
+            error = HMM_MAD(candidate,self.X_test)
+            if error < best_guess:
+                opt_n_states = i
+                best_model = candidate
+                best_guess = error
+        self.model = best_model
+        self.n_states = opt_n_states
         print "done"
 
     def extract_means(self):
@@ -29,9 +46,9 @@ class HMM():
 
     def HMM_MAD_perc(self,obs_levels, state_means):
         hidden_states = self.model.predict(obs_levels)
-        predict_levels = [state_means[state] for state in hidden_states]
-        errors = np.abs(obs_levels[:,0] - predict_levels)/obs_levels[:,0]
-        return np.mean(errors)
+        predict_levels = np.array([state_means[state] for state in hidden_states]).reshape(obs_levels.shape)
+        abs_error = np.absolute(obs_levels - predict_levels)
+        return np.mean(abs_error)/np.mean(obs_levels)
 
     def run(self):
         self.fit_HMM()
