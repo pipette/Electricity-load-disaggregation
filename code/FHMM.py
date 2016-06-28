@@ -1,13 +1,10 @@
 import pandas as pd
 import numpy as np
-from matplotlib import cm, pyplot as plt
-from matplotlib.dates import YearLocator, MonthLocator
-import cPickle as pk
 import itertools
 from hmmlearn.hmm import GaussianHMM
 from collections import OrderedDict
 from copy import deepcopy
-from Clustering import cluster
+from Preprocessing import cluster
 
 def compute_A_fhmm(list_A):
     result = list_A[0]
@@ -156,8 +153,7 @@ def decode_hmm(length_sequence, centroids, appliance_list, states):
 
             temp = int(states[i]) / factor
             hmm_states[appliance][i] = temp % len(centroids[appliance])
-            hmm_power[appliance][i] = centroids[
-                appliance][hmm_states[appliance][i]]
+            hmm_power[appliance][i] = centroids[appliance][hmm_states[appliance][i]]
     return [hmm_states, hmm_power]
 
 class FHMM():
@@ -208,7 +204,7 @@ class FHMM():
                 num_total_states = len(states)
                 print "Number of hidden states for appliance {}: {}".format(app.name, num_total_states)
 
-            print("Training model for appliance '{} with {} hidden states'".format(app.name, num_total_states))
+            print("Training model for appliance {} with {} hidden states".format(app.name, num_total_states))
             learnt_model[app.name] = GaussianHMM(num_total_states, "full")
 
             # Fit
@@ -239,6 +235,7 @@ class FHMM():
         """Disaggregate the test data according to the model learnt previously
         Performs 1D FHMM disaggregation.
         For now assuming there is no missing data at this stage.
+        :param test_mains: test dataframe with aggregate data
         """
 
         # Array of learnt states
@@ -270,66 +267,20 @@ class FHMM():
         return prediction
 
 
-    def disaggregate(self, mains, output_datastore, **load_kwargs):
+    def disaggregate(self, mains, output_datastore, sample_period = 20):
         '''Disaggregate mains according to the model learnt previously.
         Parameters
         ----------
-        mains : nilmtk.ElecMeter or nilmtk.MeterGroup
+        mains : dataframe with aggregated output
         output_datastore : instance of nilmtk.DataStore subclass
             For storing power predictions from disaggregation algorithm.
         sample_period : number, optional
-            The desired sample period in seconds.
+            The desired sample period in minutes.
         **load_kwargs : key word arguments
             Passed to `mains.power_series(**kwargs)`
         '''
-        load_kwargs = self._pre_disaggregation_checks(load_kwargs)
-
-        load_kwargs.setdefault('sample_period', 60)
-        load_kwargs.setdefault('sections', mains.good_sections())
-
-        timeframes = []
-        building_path = '/building{}'.format(mains.building())
-        mains_data_location = building_path + '/elec/meter1'
-        data_is_available = False
-
-        import warnings
-        warnings.filterwarnings("ignore", category=Warning)
-
-        for chunk in mains.power_series(**load_kwargs):
-            # Check that chunk is sensible size before resampling
-            if len(chunk) < self.MIN_CHUNK_LENGTH:
-                continue
-
-            # Record metadata
-            timeframes.append(chunk.timeframe)
-            measurement = chunk.name
-
-            # Start disaggregation
+        for g, chunk in mains.groupby(np.arange(len(mains)) // sample_period):
             predictions = self.disaggregate_chunk(chunk)
-            for meter in predictions.columns:
-
-                meter_instance = meter.instance()
-                cols = pd.MultiIndex.from_tuples([chunk.name])
-                predicted_power = predictions[[meter]]
-                if len(predicted_power) == 0:
-                    continue
-                data_is_available = True
-                output_df = pd.DataFrame(predicted_power)
-                output_df.columns = pd.MultiIndex.from_tuples([chunk.name])
-                key = '{}/elec/meter{}'.format(building_path, meter_instance)
-                output_datastore.append(key, output_df)
-
-            # Copy mains data to disag output
-            output_datastore.append(key=mains_data_location,
-                                    value=pd.DataFrame(chunk, columns=cols))
-
-        if data_is_available:
-            self._save_metadata_for_disaggregation(
-                output_datastore=output_datastore,
-                sample_period=load_kwargs['sample_period'],
-                measurement=measurement,
-                timeframes=timeframes,
-                building=mains.building(),
-                meters=self.meters
-            )
+            output_datastore = output_datastore.append(predictions)
+        return output_datastore
 

@@ -21,19 +21,22 @@ class HMM():
 
     def fit_HMM(self):
         print "Looking for optimal number of states and fitting HMM"
-        best_guess = 10000
-        best_model = None
         for i in xrange(2,9):
             candidate = GaussianHMM(n_components=i, covariance_type="full", n_iter=1000)
             candidate.fit(self.X_train)
             error = HMM_MAD(candidate,self.X_test)
-            if error < best_guess:
-                opt_n_states = i
-                best_model = candidate
+            if i == 2:
                 best_guess = error
+                best_model = candidate
+                opt_n_states = i
+            else:
+                if error < best_guess:
+                    opt_n_states = i
+                    best_model = candidate
+                    best_guess = error
         self.model = best_model
         self.n_states = opt_n_states
-        print "done"
+        print "Done. Lowest error of {} achieved with {} states".format(best_guess, opt_n_states)
 
     def extract_means(self):
         return self.model.means_[:,0].flatten()

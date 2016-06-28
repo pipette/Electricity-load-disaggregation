@@ -5,11 +5,32 @@ import pandas as pd
 import itertools
 
 class Appliance():
-    def __init__(self, name, power_data,cluster_means):
+    def __init__(self, name, power_data):
         self.name =  name
         self.power_data = power_data
-        self.cluster_means = cluster_means
+        self.good_chunks = power_data[(power_data[name]>1)]
 
+def train_test_split(dataframe, split, second_split = None):
+    '''
+    Splits dataframe into training and validation set
+    :param dataframe: total dataframe
+    :param split: date on which to split
+    :param second_split: option to create second test set
+    :return: train, test and optionally second test dataframe
+    '''
+    df = dataframe.fillna(value = 0,inplace = False)
+    df['total'] = dataframe.sum(axis = 1)
+    if second_split:
+        return df[split:], df[split:second_split], df[second_split:]
+    else:
+        return df[split:], df[:split]
+
+def create_matrix(appliance,good_chunks = True):
+    if not good_chunks:
+        power_data = appliance.power_data
+    else:
+        power_data = appliance.good_chunks
+    return power_data.values.reshape((-1, 1))
 
 def cluster(x_train,x_test, max_number_clusters):
     """
@@ -33,12 +54,13 @@ def cluster(x_train,x_test, max_number_clusters):
     return centers
 
 def Create_combined_states(df):
-    columns = df.columns
+    new_df = df.copy()
+    columns = new_df.columns
     column_combinations = []
     for i in xrange(2,len(columns)+1):
         column_combinations = column_combinations + list(itertools.combinations(columns,i))
 
     for x in column_combinations:
         name = " ".join(list(x))
-        df[name] = df[list(x)].sum(axis = 1)
-    return df
+        new_df[name] = df[list(x)].sum(axis = 1)
+    return new_df
