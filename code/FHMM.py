@@ -282,5 +282,7 @@ class FHMM():
         for g, chunk in mains.groupby(np.arange(len(mains)) // sample_period):
             predictions = self.disaggregate_chunk(chunk)
             output_datastore = output_datastore.append(predictions)
+            if g != 0 and g%72 == 0:
+                print "Disaggregated {} day(s) of data".format(g/72)
         return output_datastore
 

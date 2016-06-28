@@ -1,113 +1,98 @@
 import cPickle as pk
 import pandas as pd
 import numpy as np
-import FHMM
-from HMM import HMM, HMM_MAD
-from Preprocessing import Create_combined_states, Appliance
+from FHMM import FHMM
+from HMM import HMM, HMM_MAD, perc_std_expl,r2
+from Preprocessing import Create_combined_states, Appliance, train_test_split,create_matrix
+import math
 
 
+# with open('/Users/nelly/Galvanize/Capstone/Electricity-load-prediction/data/4app_train.pkl') as f:
+#     four_app_train = pk.load(f)
+#
+# with open('/Users/nelly/Galvanize/Capstone/Electricity-load-prediction/data/4app_test.pkl') as f:
+#     four_app_test = pk.load(f)
 
-with open('/Users/nelly/Galvanize/Capstone/Electricity-load-prediction/data/4app_train.pkl') as f:
-    four_app_train = pk.load(f)
+def perc_std_expl_full(pred_df,obs_df):
+    """
+    :param observed: df of observed energy levels per channel
+    :param predicted: df of predicted energy levels per channel
+    :return: percentage of standard deviation explained
+    """
+    return_dict = {}
+    for channel in pred_df:
+        X_pred = pred_df[[channel]].values
+        X_obs = obs_df[[channel]].values
+        obs_mean = np.mean(X_obs)
+        r2 = 1 - (np.sum((X_obs - X_pred)**2))/np.sum((X_obs - obs_mean)**2)
+        return_dict[channel] = 1 - math.sqrt(1-r2)
+    return return_dict
 
-with open('/Users/nelly/Galvanize/Capstone/Electricity-load-prediction/data/4app_test.pkl') as f:
-    four_app_test = pk.load(f)
+def r2_full(pred_df,obs_df):
+    return_dict = {}
+    for channel in pred_df:
+        X_pred = pred_df[[channel]].values
+        X_obs = obs_df[[channel]].values
+        obs_mean = np.mean(X_obs)
+        r2 = 1 - (np.sum((X_obs - X_pred)**2))/np.sum((X_obs - obs_mean)**2)
+        return_dict[channel] = r2
+    return return_dict
 
 
+with open('/Users/nelly/Galvanize/Capstone/Electricity-load-prediction/data/combined.pkl') as f:
+    total = pk.load(f)
 
-columns = ['channel_5','channel_6','channel_12']
-    # four_app_train.columns[::2]
-four_app_train = four_app_train[columns]
-four_app_test = four_app_test[columns]
-four_app_test['total'] = four_app_test[columns].sum(axis = 1)
-new_df_train = Create_combined_states(four_app_train)
-new_df_test = Create_combined_states(four_app_test)
-
+print total.head()
+combined = total['2013-06-01 00:00:00': '2013-09-30 23:59:59'][['channel_12','channel_5','channel_6']]
+train_set, test_set1, test_set2 = train_test_split(combined,'2013-07-31 23:59:59','2013-08-31 23:59:59')
 
 app_train_list = []
 app_test_list1 = []
+app_test_list2 = []
 
-
-# for channel in four_app_train.columns:
-#     app_train_list.append(Appliance(channel,new_df_train[[channel]],[0,0]))
-#     app_test_list1.append(Appliance(channel,new_df_test1[[channel]],[0,0]))
-#     app_test_list2.append(Appliance(channel,new_df_test2[[channel]],[0,0]))
-
-for channel in columns:
-    app_train_list.append(Appliance(channel,four_app_train[[channel]],[0,0]))
-    app_test_list1.append(Appliance(channel,four_app_test[[channel]],[0,0]))
-
+for channel in combined.columns:
+    app_train_list.append(Appliance(channel,train_set[[channel]]))
+    app_test_list1.append(Appliance(channel,test_set1[[channel]]))
+    app_test_list2.append(Appliance(channel,test_set2[[channel]]))
 
 num_states_dict={}
-
 ModelDict = {}
+
 for i,app in enumerate(app_train_list):
-    power_data_train = app.good_chunks.fillna(value = 0,inplace = False)
-    X_train = power_data_train.values.reshape((-1, 1))
-    power_data_test = app_test_list1[i].power_data.fillna(value = 0,inplace = False)
-    X_test = power_data_test.values.reshape((-1, 1))
+    X_train = create_matrix(app,good_chunks = True)
+    X_test = create_matrix(app_test_list1[i],good_chunks = False)
     hmm = HMM(X_train,X_test)
-    hmm.fit_HMM()
+    print app.name
+    hmm.fit_HMM(perc_std_expl)
     ModelDict[app.name] = hmm.model
-    means = hmm.model.means_.round().astype(int).flatten().tolist()
-    percMAD = hmm.HMM_MAD_perc(X_test, means)
     num_states_dict[app.name] = hmm.n_states
-    print "MAD % for {} with {} states: {}".format(app.name, hmm.n_states, percMAD)
 
-
-# def check_working(x):
-#     return 1 if x>1 else 0
-#
-# four_app_test['apps_working'] = four_app_test['channel_12'].apply(lambda x: check_working(x)) + \
-#                                  four_app_test['channel_5'].apply(lambda x: check_working(x)) + \
-#                                  four_app_test['channel_6'].apply(lambda x: check_working(x)) + \
-#                                  four_app_test['channel_7'].apply(lambda x: check_working(x))
-#
-# all_working = four_app_test['2013-08-01 11:40:00':'2013-08-01 17:00:00']
-
-fhmm = FHMM.FHMM()
+fhmm = FHMM()
 fhmm.train(app_train_list,num_states_dict = num_states_dict)
 predictions = pd.DataFrame()
-predictions = fhmm.disaggregate(four_app_test[['total']], predictions)
-
+predictions = fhmm.disaggregate(test_set2[['total']], predictions)
 
 total_power_predicted = predictions.sum()
-total_power_act = four_app_test[predictions.columns].sum()
+total_power_act = test_set2[predictions.columns].sum()
 
 print total_power_predicted
 print total_power_act
 
+print sorted(predictions.columns)
 print total_power_predicted.sort_index().values/total_power_act.sort_index().values
+print perc_std_expl_full(predictions,test_set2)
+print r2_full(predictions,test_set2)
 
+predictions_15Min = predictions.resample('15Min').sum()
+test_15Min = test_set2.resample('15Min').sum()
 
+print "Percent stand.dev.explained, 15 min:", perc_std_expl_full(predictions_15Min,test_15Min)
+print "R2, 15 min:" , r2_full(predictions_15Min,test_15Min)
 
+with open('predictions.pkl','w') as f:
+    pk.dump(predictions,f)
 
-# for shift in range(len(all_working)/20):
-#     subset = all_working[20*shift:20*shift+20]
-#     x_test = subset[['total']].values.reshape((-1, 1))
-#     prediction = fhmm.disaggregate_chunk(subset[['total']])
-    # counter = 0
-    # for model in ModelDict:
-    #     logprob = ModelDict[model].score(x_test)
-    #     if counter == 0:
-    #         best_fit = ModelDict[model]
-    #         best_score = logprob
-    #     else:
-    #         if logprob > best_score:
-    #             best_fit = ModelDict[model]
-    #             best_score = logprob
-    #     counter +=1
-    # chunk_MAD = HMM_MAD(best_fit,x_test)
-
-
-
-# for model in ModelDict:
-
-
-# for ind in fhmm.individual:
-#     print fhmm.individual[ind].transmat_
-#     print "*"*100
-
-# print fhmm.model.transmat_
+with open('test2.pkl','w') as f:
+    pk.dump(test_set2,f)
 
 
