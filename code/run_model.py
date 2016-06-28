@@ -43,7 +43,8 @@ with open('/Users/nelly/Galvanize/Capstone/Electricity-load-prediction/data/comb
     total = pk.load(f)
 
 print total.head()
-combined = total['2013-06-01 00:00:00': '2013-09-30 23:59:59'][['channel_12','channel_5','channel_6']]
+combined = total['2013-06-01 00:00:00': '2013-09-30 23:59:59'][['channel_12','channel_5','channel_6','channel_3']]
+
 train_set, test_set1, test_set2 = train_test_split(combined,'2013-07-31 23:59:59','2013-08-31 23:59:59')
 
 app_train_list = []

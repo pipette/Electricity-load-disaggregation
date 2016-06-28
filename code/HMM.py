@@ -43,7 +43,7 @@ class HMM():
 
     def fit_HMM(self,error_metric):
         print "Looking for optimal number of states and fitting HMM"
-        for i in xrange(2,9):
+        for i in xrange(2,5):
             candidate = GaussianHMM(n_components=i, covariance_type="full", n_iter=1000)
             candidate.fit(self.X_train)
             if error_metric == HMM_MAD:
