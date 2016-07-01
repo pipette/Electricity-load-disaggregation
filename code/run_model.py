@@ -6,13 +6,6 @@ from HMM import HMM, HMM_MAD, perc_std_expl,r2
 from Preprocessing import Create_combined_states, Appliance, train_test_split,create_matrix
 import math
 
-
-# with open('/Users/nelly/Galvanize/Capstone/Electricity-load-prediction/data/4app_train.pkl') as f:
-#     four_app_train = pk.load(f)
-#
-# with open('/Users/nelly/Galvanize/Capstone/Electricity-load-prediction/data/4app_test.pkl') as f:
-#     four_app_test = pk.load(f)
-
 def perc_std_expl_full(pred_df,obs_df):
     """
     :param observed: df of observed energy levels per channel
@@ -76,13 +69,8 @@ predictions = fhmm.disaggregate(test_set2[['total']], predictions)
 total_power_predicted = predictions.sum()
 total_power_act = test_set2[predictions.columns].sum()
 
-print total_power_predicted
-print total_power_act
-
-print sorted(predictions.columns)
-print total_power_predicted.sort_index().values/total_power_act.sort_index().values
-print perc_std_expl_full(predictions,test_set2)
-print r2_full(predictions,test_set2)
+print "Percent stand.dev.explained, 1 min:", perc_std_expl_full(predictions,test_set2)
+print "R2, 1 min:" , r2_full(predictions,test_set2)
 
 predictions_15Min = predictions.resample('15Min').sum()
 test_15Min = test_set2.resample('15Min').sum()
@@ -90,10 +78,11 @@ test_15Min = test_set2.resample('15Min').sum()
 print "Percent stand.dev.explained, 15 min:", perc_std_expl_full(predictions_15Min,test_15Min)
 print "R2, 15 min:" , r2_full(predictions_15Min,test_15Min)
 
-with open('predictions.pkl','w') as f:
+with open('/Users/nelly/Galvanize/Capstone/Electricity-load-prediction/data/predictions.pkl','w') as f:
     pk.dump(predictions,f)
 
-with open('test2.pkl','w') as f:
+with open('/Users/nelly/Galvanize/Capstone/Electricity-load-prediction/data/test2.pkl','w') as f:
     pk.dump(test_set2,f)
 
-
+with open('/Users/nelly/Galvanize/Capstone/Electricity-load-prediction/data/Trained_model.pkl','w') as f:
+    pk.dump(fhmm,f)
