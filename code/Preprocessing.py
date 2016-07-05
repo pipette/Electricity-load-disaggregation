@@ -21,9 +21,9 @@ def train_test_split(dataframe, split, second_split = None):
     df = dataframe.fillna(value = 0,inplace = False)
     df['total'] = dataframe.sum(axis = 1)
     if second_split:
-        return df[split:], df[split:second_split], df[second_split:]
+        return df[:split], df[split:second_split], df[second_split:]
     else:
-        return df[split:], df[:split]
+        return df[:split], df[split:]
 
 def create_matrix(appliance,good_chunks = True):
     if not good_chunks:
