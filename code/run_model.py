@@ -78,11 +78,11 @@ test_15Min = test_set2.resample('15Min').sum()
 print "Percent stand.dev.explained, 15 min:", perc_std_expl_full(predictions_15Min,test_15Min)
 print "R2, 15 min:" , r2_full(predictions_15Min,test_15Min)
 
-with open('/Users/nelly/Galvanize/Capstone/Electricity-load-prediction/data/predictions.pkl','w') as f:
+with open('/Users/nelly/Galvanize/Capstone/Electricity-load-prediction/data/prediction2.pkl','w') as f:
     pk.dump(predictions,f)
 
-with open('/Users/nelly/Galvanize/Capstone/Electricity-load-prediction/data/test2.pkl','w') as f:
+with open('/Users/nelly/Galvanize/Capstone/Electricity-load-prediction/data/test2a.pkl','w') as f:
     pk.dump(test_set2,f)
 
-with open('/Users/nelly/Galvanize/Capstone/Electricity-load-prediction/data/Trained_model.pkl','w') as f:
+with open('/Users/nelly/Galvanize/Capstone/Electricity-load-prediction/data/Trained_model2.pkl','w') as f:
     pk.dump(fhmm,f)
