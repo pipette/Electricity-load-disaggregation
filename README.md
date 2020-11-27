@@ -1,6 +1,6 @@
 # Smart meter load disaggregation
 
-##Motivation
+## Motivation
 
 The smart meter usage has been increasing in the past years as people get more motivated to improve their energy management, reduce consumption and utility costs.
 But even though smart meters help us understand our aggregate power consumption, we are still poor at estimating how much energy individual appliances are
@@ -19,8 +19,8 @@ All that being said, the basic aim of the smart meter disaggregation algorithm c
 These are the two questions I tried to answer in project.
 
 
-##Data
-I  used the May 2016 release for UK domestic appliance-level ([UK-DALE](http://www.doc.ic.ac.uk/~dk3810/data/)) electricity dataset. 
+## Data
+I  used the May 2016 release for UK domestic appliance-level ([UK-DALE](https://jack-kelly.com/data)) electricity dataset. 
 The dataset contains power demand for 5 houses, where for each house they measure whole house mains power demand as well as appliance level demand
  at 6 seconds frequency.
  For three of the six houses they also provide voltage and current measurements but for the time being I just focused on power.
@@ -29,7 +29,7 @@ After loading the data into pandas I resampled it into 1 min frequencies and use
 of observations for testing. 
 
 
-##Methodology
+## Methodology
 
 ### The model
 From the very beginning I decided that I'm only going to use Hidden Markov Model to extract the appliance signal. HMM proved to perform well in such 
@@ -67,7 +67,7 @@ both capture when device is ON vs OFF as well as how far the estimate deviates f
 interpret and provides another interesting insight, namely if the coefficient is negative it tells us that observed and predicted data are a poor match or not in agreement.
 MAD will not provide us this information.
 
-###Model Evaluation
+### Model Evaluation
 For this project I calculated an individual R2 for each of the four appliances, however I can imagine going forward that as the number of appliances 
 increases a single metric would be more usefull.
 Since we are dealing with time series, we can't just randomly split the data into training and testing set. For this reason I used 2 months of data 
@@ -87,7 +87,7 @@ The table and graphs below show the performance of the best model on the test se
 <img src="/img/kettle.png" width="450" height="350"/>
 
 
-##Take-aways
+## Take-aways
 The examples below show how disaggregated data can be used by both utilities and their customers to save money and also reduce carbon footprint.
 On the customer side splitting the total usage up into components provides better insights which appliance uses most of their energy,
  users can compare to other households or over time. So they can make better decisions how to optimise their use, reduce cost or CO2.
@@ -101,7 +101,7 @@ save on imbalance prices.
 <img src="/img/3_days_ind.png" width="450" height="350" />
 
 
-##Conclusion
+## Conclusion
 
 
 The scope of this project had to be limited due to time constraints (2 weeks) but can be continued in the following directions:
